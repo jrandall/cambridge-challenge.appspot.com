@@ -51,7 +51,7 @@ const guestbookTemplateHTML = `
       {.section User}
         <b>{@|html}</b> accessed at: 
       {.or}
-        An anonymous person accessed at: 
+        An anonymous person FOOBAZED at: 
       {.end}
       {Date|dstime|html} from {RemoteAddress|html}
     {.end}
