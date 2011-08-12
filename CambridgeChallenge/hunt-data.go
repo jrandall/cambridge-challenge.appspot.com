@@ -1,20 +1,22 @@
 /*
- hunt-data
+ hunt-data.go - data structures and reader/writer for hunt data
 
     Copyright 2011 Joshua C. Randall <jcrandall@alum.mit.edu>
 
-    This program is free software: you can redistribute it and/or modify
-    it under the terms of the GNU Affero General Public License as published by
+    This file is part of CambridgeChallenge.
+
+    CambridgeChallenge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
     (at your option) any later version.
 
-    This program is distributed in the hope that it will be useful,
+    CambridgeChallenge is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Affero General Public License for more details.
+    GNU General Public License for more details.
 
     You should have received a copy of the GNU Affero General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+    along with CambridgeChallenge.  If not, see <http://www.gnu.org/licenses/>.
 */
 package CambridgeChallenge
 
@@ -22,36 +24,37 @@ import (
     "os"
     "json"
     "fmt"
+    "io"
 )
 
 type Clue struct {
-     Name string
+     ClueName string
      Prompt string
      Answer string
 }
 
 type State struct {
-     Name string
+     StateName string
      NextState string
      Clues []Clue
 }
 
 type Hunt struct {
-     Name string
-     Date string
+     HuntName string
+     HuntDate string
      EnterState string
-     States []State
+     States map[string]*State
 }
 
 
-var h Hunt
+//var h Hunt
 
 func init() {
-     // CreateHuntDataTemplate("hunt-template.json")
-     h = LoadHuntData("hunt.json")
+     // CreateHuntDataTemplateFile("hunt-template.json")
+     //     h = LoadHuntDataFile("hunt.json")
 }
 
-func CreateHuntDataTemplate(saveFileName string) {
+func CreateHuntDataTemplateFile(saveFileName string) {
      huntFileWriter, err := os.Create(saveFileName)
      	if err != nil {
 	  // error opening hunt file
@@ -59,16 +62,18 @@ func CreateHuntDataTemplate(saveFileName string) {
      	} else {
 	  // template hunt data file created and opened for writing
 	  defer huntFileWriter.Close()
-	  encoder := json.NewEncoder(huntFileWriter)
-	  dummyClueA1 := Clue{Name:"NameA1",Prompt:"PromptA1",Answer:"AnswerA1"}
-	  dummyClueA2 := Clue{Name:"NameA2",Prompt:"PromptA2",Answer:"AnswerA2"}
-	  dummyStateA := State{Name:"NameA",Clues:[]Clue{dummyClueA1,dummyClueA2}}
-	  dummyClueB1 := Clue{Name:"NameB1",Prompt:"PromptB1",Answer:"AnswerB1"}
-	  dummyClueB2 := Clue{Name:"NameB2",Prompt:"PromptB2",Answer:"AnswerB2"}
-	  dummyStateB := State{Name:"NameB",Clues:[]Clue{dummyClueB1,dummyClueB2}}
-	  huntTemplate := Hunt{Name:"HuntName",Date:"HuntDate",States:[]State{dummyStateA,dummyStateB}}
+	  dummyClueA1 := Clue{ClueName:"NameA1",Prompt:"PromptA1",Answer:"AnswerA1"}
+	  dummyClueA2 := Clue{ClueName:"NameA2",Prompt:"PromptA2",Answer:"AnswerA2"}
+	  dummyStateA := State{StateName:"NameA",Clues:[]Clue{dummyClueA1,dummyClueA2}}
+	  dummyClueB1 := Clue{ClueName:"NameB1",Prompt:"PromptB1",Answer:"AnswerB1"}
+	  dummyClueB2 := Clue{ClueName:"NameB2",Prompt:"PromptB2",Answer:"AnswerB2"}
+	  dummyStateB := State{StateName:"NameB",Clues:[]Clue{dummyClueB1,dummyClueB2}}
+	  huntTemplate := Hunt{
+	  	       HuntName:"HuntName",
+	  	       HuntDate:"HuntDate",
+		       States:map[string]*State{"NameA":&dummyStateA,"NameB":&dummyStateB}}
 	  fmt.Println("json encoding hunt", huntTemplate)
-	  err := encoder.Encode(&huntTemplate)
+	  err = EncodeHuntData(huntFileWriter, &huntTemplate)
 	  if err != nil {
 	    panic(fmt.Sprintf("Error encoding JSON %v", err))
 	  }
@@ -76,7 +81,7 @@ func CreateHuntDataTemplate(saveFileName string) {
 	return
 }
 
-func LoadHuntData(huntFileName string) (h Hunt) {
+func LoadHuntDataFile(huntFileName string) (h *Hunt) {
      	huntFileReader, err := os.Open(huntFileName)
      	if err != nil {
 	  // error opening hunt file
@@ -84,12 +89,22 @@ func LoadHuntData(huntFileName string) (h Hunt) {
      	} else {
 	  // hunt file opened
 	  defer huntFileReader.Close()
-          decoder := json.NewDecoder(huntFileReader)
-	  err := decoder.Decode(&h)
+	  h, err = DecodeHuntData(huntFileReader)
 	  if err != nil {
 	    panic(fmt.Sprintf("Error decoding JSON %v", err))
 	  }
-     	}
-     	return h
+	}
+	return // h	  
 }
 
+func DecodeHuntData(huntJSONReader io.Reader) (h *Hunt, err os.Error) {
+        decoder := json.NewDecoder(huntJSONReader)
+	err = decoder.Decode(&h)
+     	return // h, err
+}
+
+func EncodeHuntData(huntJSONWriter io.Writer, h *Hunt) (err os.Error) {
+	  encoder := json.NewEncoder(huntJSONWriter)
+	  err = encoder.Encode(h)
+	  return // err
+}

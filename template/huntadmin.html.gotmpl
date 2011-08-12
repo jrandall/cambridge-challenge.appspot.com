@@ -3,5 +3,41 @@
     <p>Welcome to huntadmin, 
      {.section User}<b>{@|html}</b>{.or}anonymous person{.end}!
     </p>
+
+    {.section UserError}
+    <div class="UserError">Error: {@}</div>
+    {.end}
+
+    {.section StatusMessage}
+    <div class="StatusMessage">{@}</div>
+    {.end}
+
+    <h2>Hunt Directory</h2>
+    <ul>
+    {.repeated section Hunts}
+    <li>
+      {.section HuntName}<a href="/Hunt/{@|html}">{@|html}</a>{.end} 
+      {.section CreatedDate}created on {@|dstime|html}{.end}
+      {.section Creator}by {@|html}{.end}
+      <a href="/HuntAdmin/Download/?blobKey={.section BlobKey}{@|html}{.end}">{.section HuntName}download {@|html} JSON{.end}</a>
+    </li>
+    {.end}
+    </ul>
+
+    {.section UploadURL}
+    <h2>Upload a hunt JSON file:</h2>
+    <p>
+    <form action="{@}" method="post" enctype="multipart/form-data">
+      <dl>
+	<dt>Hunt name</dt>
+	<dd><input type="text" name="hunt_name"></dd>
+	<dt>Hunt JSON file</dt>
+	<dd><input type="file" name="hunt_json"></dd>
+      </dl>
+      <input type="submit" value="Upload Hunt">
+    </form>
+    </p>
+    {.end}
+
    </body>
 </html>

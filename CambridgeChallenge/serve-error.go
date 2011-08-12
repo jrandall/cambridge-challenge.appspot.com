@@ -27,9 +27,12 @@ import (
        "os"
 )
 
+// internal server error
 func serveError(c appengine.Context, w http.ResponseWriter, err os.Error) {
         w.WriteHeader(http.StatusInternalServerError)
         w.Header().Set("Content-Type", "text/plain")
         io.WriteString(w, "Internal Server Error")
         c.Errorf("%v", err)
 }
+
+

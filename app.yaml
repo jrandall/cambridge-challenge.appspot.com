@@ -1,8 +1,26 @@
 application: cambridge-challenge
-version: 0-1-test
+version: 0-1
 runtime: go
 api_version: 2
-
 handlers:
+
+# static serving of stylesheets
+- url: /stylesheets
+  static_dir: static/stylesheets
+
+# go handles all other URLs
 - url: /.*
   script: _go_app
+
+# default skip_files
+skip_files:
+- ^(.*/)?app\.yaml
+- ^(.*/)?app\.yml
+- ^(.*/)?index\.yaml
+- ^(.*/)?index\.yml
+- ^(.*/)?#.*#
+- ^(.*/)?.*~
+- ^(.*/)?.*\.py[co]
+- ^(.*/)?.*/RCS/.*
+- ^(.*/)?\..*
+
