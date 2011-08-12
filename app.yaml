@@ -1,8 +1,12 @@
 application: cambridge-challenge
-version: 0-1
+version: 0-2
 runtime: go
 api_version: 2
 handlers:
+
+# redirect appengine login_required to our Login handler (not actually needed unless it would otherwise have login: required below)
+- url: /_ah/login_required
+  script: _go_app
 
 # static serving of stylesheets
 - url: /stylesheets
@@ -16,6 +20,7 @@ handlers:
 #go handles all other URLs
 - url: /.*
   script: _go_app
+  login: required
 
 # default skip_files
 skip_files:
