@@ -31,6 +31,7 @@ import (
     "fmt"
     "appengine/blobstore"
     "appengine/datastore"
+	"net"
 )
 
 const (
@@ -183,12 +184,32 @@ func handleHunt(w http.ResponseWriter, r *http.Request) {
       	 td.SuppressAnswerBox = true
 	 // if these clues don't have answers, we may have a "Forward" / "Back" button submission, check for that and act on it
 	 if r.FormValue("Navigate") == "Forward" {
+		//check for an IP address requirement
+		criterion := td.CurrentState.AllowNetMask
+		if (criterion != ""){
+			maskchunks := strings.Split(criterion,"/",-1)
+			mask := net.ParseIP(maskchunks[0])
+
+			ra:= net.ParseIP(r.RemoteAddr)
+			//these are the correct bytes from the IPv6 storage...I tried *desperately*
+			// to get it to make a mask from an IP object but it seems impossible!
+			maskedIP := ra.Mask(net.IPv4Mask(mask[12],mask[13],mask[14],mask[15]))
+			if (maskedIP.Equal(net.ParseIP(maskchunks[1]))){
+				err = StateTransition(c, td.User, td.HuntName, td.CurrentState.NextState, td.CurrentState.StateName)
+					     if err != nil {
+					     	panic(fmt.Sprintf("error advancing from State %v to NextState %v: %v", td.CurrentState.StateName, td.CurrentState.NextState, err))
+					     }
+					 // redirect
+					 http.Redirect(w, r, huntPath+"/"+td.HuntName, http.StatusFound)
+			}
+		}else{
 err = StateTransition(c, td.User, td.HuntName, td.CurrentState.NextState, td.CurrentState.StateName)
 	     if err != nil {
 	     	panic(fmt.Sprintf("error advancing from State %v to NextState %v: %v", td.CurrentState.StateName, td.CurrentState.NextState, err))
 	     }
 	 // redirect
 	 http.Redirect(w, r, huntPath+"/"+td.HuntName, http.StatusFound)	    
+	}
 	 } 
 	 if r.FormValue("Navigate") == "Back" {
 	    err = StateTransition(c, td.User, td.HuntName, currentHuntState.FromState, td.CurrentState.StateName)
@@ -198,7 +219,7 @@ err = StateTransition(c, td.User, td.HuntName, td.CurrentState.NextState, td.Cur
 	 // redirect
 	 http.Redirect(w, r, huntPath+"/"+td.HuntName, http.StatusFound)
 	 }
-      }
+ }
 
 
     w.Header().Set("Content-Type", "text/html")

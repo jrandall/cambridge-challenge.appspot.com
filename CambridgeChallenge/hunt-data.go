@@ -36,6 +36,7 @@ type Clue struct {
 type State struct {
      StateName string
      NextState string
+	 AllowNetMask string
      Clues []Clue
 }
 

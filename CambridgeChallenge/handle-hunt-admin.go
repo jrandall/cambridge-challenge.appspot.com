@@ -122,7 +122,6 @@ func deleteBlobsOnRecover(w http.ResponseWriter, r *http.Request, blobs map[stri
 }
 
 
-
 func handleHuntAdminUpload(w http.ResponseWriter, r *http.Request) {
      c := appengine.NewContext(r)
      user := requireAnyUser(w, r)
