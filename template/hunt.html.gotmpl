@@ -1,0 +1,76 @@
+<html>
+  <head>
+    <title>
+      {.section HuntName}Cambridge Challenge {@|html}{.or}Cambridge Challenge{.end}
+    </title>
+  </head>
+  <body>
+    {.section Error}
+    Error: {@|html}
+    {.end}
+
+    {.section HuntName}
+    <p>Welcome to {@|html}, 
+      {.section User}{@|html}{.or}anonymous person{.end}!
+    </p>
+    
+    {.section CurrentState}
+	 <!-- State: {.section StateName}{@|html}{.end} -->
+	 <!-- NextState: {.section NextState}{@|html}{.end} -->
+	 {.repeated section Clues}
+	    {.section Prompt}{@}{.end}
+	    {# FIXME: ANSWER IN HTML SOURCE FOR DEBUGGING ONLY!}
+	    <!-- Answer: {.section Answer}{@|html}{.end} -->
+	 {.end}
+    {.end}
+
+
+
+    <form action="/Hunt/{.section HuntName}{@|html}{.end}/" method="post">
+      {.section SuppressAnswerBox}
+      <div><input type="submit" name="Navigate" value="Forward"/></div>
+      <div><input type="submit" name="Navigate" value="Back"/></div>
+      {.or}<div><input type="text" name="Answer"/></div>
+      <div><input type="submit" name="Submit" value="Go"/></div>{.end}
+    </form>
+    <!-- Hunt {.section HuntName}{@|html} {.end}{.section CreatedDate}Created {@|dstime|html} by {.section Creator}{@|html}{.or}anonymous person{.end}{.end} -->
+
+    
+    
+    {# HuntData is present on dev server only}
+    {.section DebugHuntData}
+    <hr/>
+    Hunt Debug Data Dump
+    <div>
+      {.section HuntName}<li>Hunt Name: {@|html}</li>{.end}
+      {.section HuntDate}<li>Hunt Date: {@|html}</li>{.end}
+      {.section EnterState}<li>EnterState: {@|html}</li>{.or}WARNING: no EnterState{.end}
+      <li>States:
+	<ul>{.repeated section States}
+	  {.section StateName}<li>State: {@|html}</li>{.or}unnamed state{.end}
+	  <ul>
+	    <li>Clues:
+		<ol>{.repeated section Clues}
+		  <li>{.section ClueName}Name: {@|html}{.or}unnamed clue{.end}
+		    <ul>
+		      {.section Prompt}<li>Prompt: {@|html}</li>{.end}
+		      {.section Answer}<li>Answer: {@|html}</li>{.end}
+		    </ul>
+		  </li>
+		  {.end}
+		</ol>
+	    </li>
+	    {.section NextState}<li>NextState: {@|html}</li>{.end}
+	  </ul>
+	  </li>
+	  {.end}
+	</ul>
+    </div>
+    {.end}
+
+    {.or}{# HuntName not found}
+    <p>Sorry, there is no hunt at this address.</p>
+    {.end}
+
+   </body>
+</html>
