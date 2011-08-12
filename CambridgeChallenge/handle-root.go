@@ -1,32 +1,65 @@
-package hello
+/*
+ handle-root.go - respond to requests for /
+
+    Copyright 2011 Joshua C. Randall <jcrandall@alum.mit.edu>
+
+    This file is part of CambridgeChallenge.
+
+    CambridgeChallenge is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    CambridgeChallenge is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with CambridgeChallenge.  If not, see <http://www.gnu.org/licenses/>.
+*/
+package CambridgeChallenge
 
 import (
-    "appengine"
-    "appengine/datastore"
-    "appengine/user"
     "http"
     "template"
-    "time"
-    "io"
 )
 
-type Log struct {
+const (
+      rootTemplateFileName = "template/root.html.gotmpl"
+)
+
+
+/*
+type StateTransitionLog struct {
     User          string
     Date          datastore.Time
-    RemoteAddress string
-    Content 	  string
+    FromState	  string
+    ToState	  string
 }
+
+type CurrentState struct {
+    User          string
+    State	  string
+}
+*/
 
 func init() {
-    http.HandleFunc("/", root)
-    http.HandleFunc("/sign", sign)
+    http.HandleFunc("/", handleRoot)
 }
 
-func root(w http.ResponseWriter, r *http.Request) {
-    requireAnyUser(w, r)
+type RootData struct {
+     User string
+}
+
+func handleRoot(w http.ResponseWriter, r *http.Request) {
+    var rd RootData
+    rd.User = requireAnyUser(w, r)
+    LogAccess(r, rd.User)
+/*
     c := appengine.NewContext(r)
-    q := datastore.NewQuery("Log").Order("-Date").Limit(10)
-    greetings := make([]Log, 0, 10)
+    q := datastore.NewQuery("Access").Order("-Date").Limit(10)
+    greetings := make([]Access, 0, 10)
     if _, err := q.GetAll(c, &greetings); err != nil {
         http.Error(w, err.String(), http.StatusInternalServerError)
         return
@@ -34,72 +67,13 @@ func root(w http.ResponseWriter, r *http.Request) {
     if err := guestbookTemplate.Execute(w, greetings); err != nil {
         http.Error(w, err.String(), http.StatusInternalServerError)
     }
-}
-
-func dstimeFormatter(wr io.Writer, formatter string, dstime ...interface{}) {
-  io.WriteString(wr, time.SecondsToUTC(int64(dstime[0].(datastore.Time))/1000000).Format(time.RFC1123));
-}
-
-var guestbookTemplate = template.MustParse(guestbookTemplateHTML, template.FormatterMap{"dstime" : dstimeFormatter})
-
-const guestbookTemplateHTML = `
-<html>
-  <body>
-   <ul>
-    {.repeated section @}
-     <li>
-      {.section User}
-        <b>{@|html}</b> accessed at: 
-      {.or}
-        An anonymous person FOOBAZED at: 
-      {.end}
-      {Date|dstime|html} from {RemoteAddress|html}
-    {.end}
-   </ul>
-    <form action="/sign" method="post">
-      <div><textarea name="content" rows="3" cols="60"></textarea></div>
-      <div><input type="submit" value="Submit"></div>
-    </form>
-  </body>
-</html>
-`
-
-func requireAnyUser(w http.ResponseWriter, r *http.Request) (userString string) {
-    c := appengine.NewContext(r)
-    u := user.Current(c); 
-    if u != nil {
-        // valid user logged in
-        return(u.String())
-    } else {
-       // user not logged in, redirect to login page
-       url, err := user.LoginURL(c, r.URL.String())
-       if err != nil {
-       	 http.Error(w, err.String(), http.StatusInternalServerError)
-	 return ""
-       }
-       w.Header().Set("Location", url)
-       w.WriteHeader(http.StatusFound)
-       return ""
-    }
-    return ""
-}
-
-func sign(w http.ResponseWriter, r *http.Request) {
-    c := appengine.NewContext(r)
-    g := Log{
-        Content:    r.FormValue("content"),
-        Date:       datastore.SecondsToTime(time.Seconds()),
-	RemoteAddress: r.RemoteAddr,
-    }
-    g.User = requireAnyUser(w, r)
-
-
-    _, err := datastore.Put(c, datastore.NewIncompleteKey("Log"), &g)
-    if err != nil {
+*/
+    if err := rootTemplate.Execute(w, rd); err != nil {
         http.Error(w, err.String(), http.StatusInternalServerError)
-        return
     }
-
-    http.Redirect(w, r, "/", http.StatusFound)
 }
+
+var rootTemplate = template.MustParseFile(rootTemplateFileName, template.FormatterMap{"dstime" : dstimeFormatter})
+
+
 
