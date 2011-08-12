@@ -8,7 +8,12 @@ handlers:
 - url: /stylesheets
   static_dir: static/stylesheets
 
-# go handles all other URLs
+#require admin for HuntAdmin
+- url: /HuntAdmin/
+  script: _go_app
+  login: admin
+
+#go handles all other URLs
 - url: /.*
   script: _go_app
 
