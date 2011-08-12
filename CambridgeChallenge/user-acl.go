@@ -34,7 +34,7 @@ func requireAnyUser(w http.ResponseWriter, r *http.Request) (User string) {
 	User = u.String()
     } else {
        // user not logged in, redirect to login page
-       url, err := user.LoginURL(c, r.URL.String())
+       url, err := user.LoginURLFederated(c, r.URL.String(), "")
        if err != nil {
        	 http.Error(w, err.String(), http.StatusInternalServerError)
        }

@@ -25,6 +25,7 @@ import (
     "appengine"
     "appengine/blobstore"
     "appengine/datastore"
+    "appengine/user"
     "http"
     "template"
     "os"
@@ -51,6 +52,7 @@ type HuntDirectoryEntry struct {
 type HuntAdminTemplateData struct {
      User string
      UploadURL *http.URL
+     LogoutURL string
      UserError string
      StatusMessage string
      Hunts []HuntDirectoryEntry
@@ -74,6 +76,12 @@ func handleHuntAdmin(w http.ResponseWriter, r *http.Request) {
     LogAccess(r, td.User)
 
     c := appengine.NewContext(r)
+    td.LogoutURL, err = user.LogoutURL(c, huntAdminPath)
+    if err != nil {
+       c.Errorf("could not get LogoutURL: %v", err)
+       serveError(c, w, err)
+       return
+    }   
 
     td.Hunts = make([]HuntDirectoryEntry, 0, huntLimit)
     if _, err := hdQuery.GetAll(c, &td.Hunts); err != nil {

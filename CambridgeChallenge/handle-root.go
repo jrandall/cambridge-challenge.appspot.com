@@ -23,6 +23,9 @@ package CambridgeChallenge
 import (
     "http"
     "template"
+    "appengine"
+    "appengine/user"
+    "os"
 )
 
 const (
@@ -48,16 +51,25 @@ func init() {
     http.HandleFunc("/", handleRoot)
 }
 
-type RootData struct {
+type RootTemplateData struct {
      User string
+     LogoutURL string
 }
 
 func handleRoot(w http.ResponseWriter, r *http.Request) {
-    var rd RootData
+    var rd RootTemplateData
     rd.User = requireAnyUser(w, r)
     LogAccess(r, rd.User)
-/*
+    var err os.Error
     c := appengine.NewContext(r)
+    rd.LogoutURL, err = user.LogoutURL(c, huntAdminPath)
+    if err != nil {
+       c.Errorf("could not get LogoutURL: %v", err)
+       serveError(c, w, err)
+       return
+    }   
+    
+/*
     q := datastore.NewQuery("Access").Order("-Date").Limit(10)
     greetings := make([]Access, 0, 10)
     if _, err := q.GetAll(c, &greetings); err != nil {

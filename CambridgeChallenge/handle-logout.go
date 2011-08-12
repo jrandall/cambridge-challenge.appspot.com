@@ -33,6 +33,10 @@ func init(){
 
 func handleLogout(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)	
-	lourl,_ := user.LogoutURL(c, "/")
+	lourl,err := user.LogoutURL(c, "/")
+	if err != nil {
+	   c.Errorf("handleLogout: error getting LogoutURL")
+	}	
+	c.Debugf("handleLogout: redirecting to logoutURL=%v", lourl)
 	http.Redirect(w, r, lourl, http.StatusFound)
 }
