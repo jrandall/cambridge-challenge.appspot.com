@@ -153,9 +153,9 @@ func handleHuntAdminUpload(w http.ResponseWriter, r *http.Request) {
      // check that hunt name is valid and unique
      huntname := other["hunt_name"][0]
      // only alphanumeric characters and _ are allowed
-     goodNameChars, err := regexp.MatchString("^[a-zA-Z0-9_]+$", huntname)
+     goodNameChars, err := regexp.MatchString("^[a-zA-Z0-9_\\-]+$", huntname)
      if !goodNameChars {
-        http.Redirect(w, r, huntAdminPath+"/?user_error=Invalid hunt name. Only alphanumeric characters or underscore are allowed. Please retry.", http.StatusFound)
+        http.Redirect(w, r, huntAdminPath+"/?user_error=Invalid hunt name. Only alphanumeric characters, underscore, or dash are allowed. Please retry.", http.StatusFound)
 	panic("invalid name: "+huntname)
      }
      if err != nil {
