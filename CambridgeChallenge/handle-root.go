@@ -24,28 +24,8 @@ import (
     "http"
     "template"
     "appengine"
-    "appengine/user"
     "os"
 )
-
-const (
-      rootTemplateFileName = "template/root.html.gotmpl"
-)
-
-
-/*
-type StateTransitionLog struct {
-    User          string
-    Date          datastore.Time
-    FromState	  string
-    ToState	  string
-}
-
-type CurrentState struct {
-    User          string
-    State	  string
-}
-*/
 
 func init() {
     http.HandleFunc("/", handleRoot)
@@ -62,26 +42,15 @@ func handleRoot(w http.ResponseWriter, r *http.Request) {
     LogAccess(r, rd.User)
     var err os.Error
     c := appengine.NewContext(r)
-    rd.LogoutURL, err = user.LogoutURL(c, huntAdminPath)
+    rd.LogoutURL, err = getLogoutURL(c, "/")
     if err != nil {
        c.Errorf("could not get LogoutURL: %v", err)
        serveError(c, w, err)
        return
     }   
     
-/*
-    q := datastore.NewQuery("Access").Order("-Date").Limit(10)
-    greetings := make([]Access, 0, 10)
-    if _, err := q.GetAll(c, &greetings); err != nil {
-        http.Error(w, err.String(), http.StatusInternalServerError)
-        return
-    }
-    if err := guestbookTemplate.Execute(w, greetings); err != nil {
-        http.Error(w, err.String(), http.StatusInternalServerError)
-    }
-*/
     if err := rootTemplate.Execute(w, rd); err != nil {
-        http.Error(w, err.String(), http.StatusInternalServerError)
+            serveError(c, w, err)
     }
 }
 

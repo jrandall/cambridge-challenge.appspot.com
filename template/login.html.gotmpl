@@ -1,0 +1,10 @@
+<html>
+  <body>
+    {.section User}<p>You are currently logged in as {@|html}</p>{.end}
+    <form action="/Login/" method="post">
+      <div><input type="hidden" name="continue" value="{.section ContinueURL}{@|html}{.end}"/></div>
+      <div>Login as User: <input type="text" name="identity"/></div>
+      <div><input type="submit" name="Login" value="Login"/></div>
+    </form>
+   </body>
+</html>

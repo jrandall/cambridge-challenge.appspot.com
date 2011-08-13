@@ -23,8 +23,9 @@ package CambridgeChallenge
 
 import (
     "http"
-	"appengine"
-	"appengine/user"
+    "appengine"
+    "appengine/user"
+    "os"
 )
 
 func init(){
@@ -33,10 +34,40 @@ func init(){
 
 func handleLogout(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)	
-	lourl,err := user.LogoutURL(c, "/")
+	returnURL := "/"
+	// parse form	
+       	err := r.ParseForm()
+       	if err != nil {
+       	  serveError(c, w, err)
+      	  return
+	}
+      	if r.FormValue("continue") != "" {
+      	   returnURL = r.FormValue("continue")
+      	}
+
+	if useOpenID {
+	  // adjust returnURL to bring us back to a local user login form
+	  laterReturnUrl := returnURL
+	  returnURL = "/Login/?chooseLogin=1&continue="+http.URLEscape(laterReturnUrl)
+	}
+	// redirect to google logout (for OpenID as well, or else we won't be locally logged out)
+	lourl,err := user.LogoutURL(c, returnURL)
 	if err != nil {
-	   c.Errorf("handleLogout: error getting LogoutURL")
+	     c.Errorf("handleLogout: error getting LogoutURL")
 	}	
 	c.Debugf("handleLogout: redirecting to logoutURL=%v", lourl)
 	http.Redirect(w, r, lourl, http.StatusFound)
+	return
+}
+
+func getLogoutURL(c appengine.Context, returnURL string) (url string, err os.Error) {
+    // set logout URL
+    if useOpenID {
+       // use our logout page
+       url = "/Logout/"+"?continue="+returnURL
+    } else {
+       // use google logout
+       url, err = user.LogoutURL(c, returnURL)
+    }
+    return // url, err
 }

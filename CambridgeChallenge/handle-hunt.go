@@ -34,12 +34,6 @@ import (
 	"net"
 )
 
-const (
-      huntPath = "/Hunt/"
-      huntTemplateFileName = "template/hunt.html.gotmpl"
-      huntStateDatastore = "HuntState"
-)
-
 // data that gets processed by the html template
 type HuntTemplateData struct {
      User string

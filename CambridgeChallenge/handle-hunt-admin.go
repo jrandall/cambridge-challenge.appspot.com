@@ -25,21 +25,11 @@ import (
     "appengine"
     "appengine/blobstore"
     "appengine/datastore"
-    "appengine/user"
     "http"
     "template"
     "os"
     "time"
     "regexp"
-)
-
-const (
-      huntAdminPath = "/HuntAdmin/"
-      huntAdminUploadPath = "/HuntAdmin/Upload/"
-      huntAdminDownloadPath = "/HuntAdmin/Download/"
-      huntAdminTemplateFileName = "template/huntadmin.html.gotmpl"
-      huntDirectoryDatastore = "HuntDirectory"
-      huntLimit = 100
 )
 
 type HuntDirectoryEntry struct {
@@ -72,11 +62,12 @@ var hdQuery = datastore.NewQuery(huntDirectoryDatastore).Order("-CreatedDate").L
 func handleHuntAdmin(w http.ResponseWriter, r *http.Request) {
     var td HuntAdminTemplateData
     var err os.Error
-    td.User = requireAnyUser(w, r)
+    td.User = requireAdminUser(w, r)
     LogAccess(r, td.User)
 
     c := appengine.NewContext(r)
-    td.LogoutURL, err = user.LogoutURL(c, huntAdminPath)
+
+    td.LogoutURL, err = getLogoutURL(c, "/")
     if err != nil {
        c.Errorf("could not get LogoutURL: %v", err)
        serveError(c, w, err)

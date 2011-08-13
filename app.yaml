@@ -1,26 +1,24 @@
 application: cambridge-challenge
-version: 0-2
+version: 0-3
 runtime: go
 api_version: 2
 handlers:
 
-# redirect appengine login_required to our Login handler (not actually needed unless it would otherwise have login: required below)
+# redirect appengine login_required to our Login handler (for openid, needed when a login: required is set below)
 - url: /_ah/login_required
+  script: _go_app
+
+# no login required for /Login/
+- url: /Login/
+  script: _go_app
+
+# go handles all other URLs
+- url: /.*
   script: _go_app
 
 # static serving of stylesheets
 - url: /stylesheets
   static_dir: static/stylesheets
-
-#require admin for HuntAdmin
-- url: /HuntAdmin/
-  script: _go_app
-  login: admin
-
-#go handles all other URLs
-- url: /.*
-  script: _go_app
-  login: required
 
 # default skip_files
 skip_files:

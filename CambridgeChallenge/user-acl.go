@@ -24,22 +24,58 @@ import (
     "appengine"
     "appengine/user"
     "http"
+    "strings"
 )
 
 func requireAnyUser(w http.ResponseWriter, r *http.Request) (User string) {
     c := appengine.NewContext(r)
     u := user.Current(c); 
-    if u != nil {
-        // valid user logged in
-	User = u.String()
-    } else {
-       // user not logged in, redirect to login page
-       url, err := user.LoginURLFederated(c, r.URL.String(), "")
-       if err != nil {
-       	 http.Error(w, err.String(), http.StatusInternalServerError)
+    if u == nil {
+       // user not logged in 
+       if useOpenID {
+              // redirect to our login page
+	      returnUrl := "/Login/"+"?chooseLogin=1&continue="+http.URLEscape(r.URL.RawPath)
+	      c.Debugf("handleLogin: redirecting to %v", returnUrl)
+	      http.Redirect(w, r, returnUrl, http.StatusFound)
+       	      return
+       } else {
+       	      // redirect to google login page
+	      returnUrl := r.URL.RawPath
+	      loginUrl, err := user.LoginURL(c, returnUrl)
+	      if err != nil {
+	      	 c.Errorf("handleLogin: error getting LoginURL for %v %v", returnUrl)
+	      }	
+	      c.Debugf("handleLogin: redirecting to loginURL=%v", loginUrl)
+	      http.Redirect(w, r, loginUrl, http.StatusFound)
        }
-       w.Header().Set("Location", url)
+    }
+    // valid user logged in
+    User = u.String()
+    url, err := http.ParseURL(User)
+    if err != nil {
+       // error parsing URL, redirect to Login?
+       c.Errorf("error parsing User as URL: %v", User)
+       w.Header().Set("Location", "/Login/")
        w.WriteHeader(http.StatusFound)
     }
+    User = strings.Split(url.Host, ".",2)[0]
     return // User
+}
+
+func requireAdminUser(w http.ResponseWriter, r *http.Request) (User string) {
+     c := appengine.NewContext(r)
+     User = requireAnyUser(w, r)
+     if appengine.IsDevAppServer() { // dev app server always admin
+     	return // User
+     }
+     // TODO this should absolutely not be a hardcoded userid
+     if User == "ccjava" {
+     	// the admin user!
+	return // User
+     }
+     // not admin user
+     c.Debugf("requireAdminUser: %v is not admin, redirecting to %v", User, "/Login/?chooseLogin=1&continue="+http.URLEscape(r.URL.RawPath))
+     w.Header().Set("Location", "/Login/?chooseLogin=1&continue="+http.URLEscape(r.URL.RawPath))
+     w.WriteHeader(http.StatusFound)
+     return // User
 }
