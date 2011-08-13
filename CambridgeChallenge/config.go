@@ -21,6 +21,9 @@
 
 package CambridgeChallenge
 
+import (
+    "appengine"
+)
 
 const (
       huntPath = "/Hunt/"
@@ -52,3 +55,7 @@ var openIdProviders []string = []string{
     		      "MyOpenID.com",
       }
 */
+
+// package global appengine Context 
+var c appengine.Context
+

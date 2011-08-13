@@ -33,7 +33,7 @@ func init(){
 }
 
 func handleLogout(w http.ResponseWriter, r *http.Request) {
-	c := appengine.NewContext(r)	
+	c = appengine.NewContext(r)	
 	returnURL := "/"
 	// parse form	
        	err := r.ParseForm()

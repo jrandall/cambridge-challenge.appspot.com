@@ -41,7 +41,7 @@ func handleRoot(w http.ResponseWriter, r *http.Request) {
     rd.User = requireAnyUser(w, r)
     LogAccess(r, rd.User)
     var err os.Error
-    c := appengine.NewContext(r)
+    c = appengine.NewContext(r)
     rd.LogoutURL, err = getLogoutURL(c, "/")
     if err != nil {
        c.Errorf("could not get LogoutURL: %v", err)

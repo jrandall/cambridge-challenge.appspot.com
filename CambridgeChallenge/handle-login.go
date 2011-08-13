@@ -43,7 +43,7 @@ type LoginTemplateData struct {
 var loginTemplate = template.MustParseFile(loginTemplateFileName, template.FormatterMap{"dstime" : dstimeFormatter})
 
 func handleLogin(w http.ResponseWriter, r *http.Request) {
-    	c := appengine.NewContext(r)	
+    	c = appengine.NewContext(r)	
     	u := user.Current(c)
 	var identity string
 	var err os.Error

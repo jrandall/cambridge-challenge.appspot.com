@@ -28,9 +28,12 @@ import (
 )
 
 type Clue struct {
-     ClueName string
-     Prompt string
-     Answer string
+     ClueName string // optional, default ""
+     Prompt string   // optional, default ""
+     Answer string   // optional, default ""
+     AnswerType string // optional, default "regexp"
+     CorrectAnswerState string // optional, default "" (stay in current state)
+     IncorrectAnswerState string // optional, default "" (stay in current state)
 }
 
 type State struct {

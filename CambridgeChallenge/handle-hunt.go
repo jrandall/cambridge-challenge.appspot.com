@@ -27,7 +27,6 @@ import (
     "os"
     "strings"
     "time"
-    "regexp"
     "fmt"
     "appengine/blobstore"
     "appengine/datastore"
@@ -58,7 +57,7 @@ func init() {
 
 var huntTemplate = template.MustParseFile(huntTemplateFileName, template.FormatterMap{"dstime" : dstimeFormatter})
 
-func StateTransition(c appengine.Context, user string, huntName string, toState string, fromState string) (err os.Error) {
+func StateTransition(user string, huntName string, toState string, fromState string) (err os.Error) {
      c.Debugf("StateTransition called to %v from %v", toState, fromState)
 	     hs := HuntState {
      	     	User: user,
@@ -75,7 +74,7 @@ func handleHunt(w http.ResponseWriter, r *http.Request) {
     var td HuntTemplateData
     var err os.Error
     defer recoverUserError(w, r)
-    c := appengine.NewContext(r)
+    c = appengine.NewContext(r)
 
     td.User = requireAnyUser(w, r)
     LogAccess(r, td.User)
@@ -97,6 +96,7 @@ func handleHunt(w http.ResponseWriter, r *http.Request) {
        // hunt found, load hunt data from blobstore
        td.HuntDirectoryEntry = &huntentries[0] // sets all HuntDirectoryEntry fields without copying data
 
+       c.Debugf("calling DecodeHuntData on blobkey %v", td.BlobKey)
        huntData, err := DecodeHuntData(blobstore.NewReader(c, td.BlobKey))
        if err != nil {
        	  serveError(c, w, err)
@@ -127,7 +127,7 @@ func handleHunt(w http.ResponseWriter, r *http.Request) {
 	     // get EnterState
 	     td.CurrentState = huntData.States[huntData.EnterState]
 	     // add Enter->CurrentState transition to huntStateDatastore
-	     err = StateTransition(c, td.User, td.HuntName, td.CurrentState.StateName, "START")
+	     err = StateTransition(td.User, td.HuntName, td.CurrentState.StateName, "START")
 	     if err != nil {
 	     	panic("error setting initial state")
 	     }
@@ -142,29 +142,28 @@ func handleHunt(w http.ResponseWriter, r *http.Request) {
       }
       answerAttempt := r.FormValue("Answer")
 
-      // TODO: state points (for multi-clue states) 
       var correct = false
       var cluesHaveAnswers = false
-	 // check answer against all clues, also checking whether any clues in this state contain an answer
+	 // check answer against all clues with answers, also noting whether any clues in this state contain an answerable answer (otherwise we are in next/previous state)
 	 var clues []Clue = td.CurrentState.Clues
 	 for _, clue := range clues {
-	     c.Debugf("checking answer, have clue with answer: %v", clue.Answer)
-	     if clue.Answer != "" {
-	       cluesHaveAnswers = true 
-     	     match, err := regexp.MatchString(clue.Answer, answerAttempt)
-	     if err != nil {
-	     	panic(fmt.Sprintf("error attempting to match answer %v against regexp %v: %v", answerAttempt, clue.Answer, err))
+	     // have a clue
+	     c.Debugf("have clue with answer: %v and answertype: %v", clue.Answer, clue.AnswerType)
+
+	     if clue.Answerable() {
+	     	// this clues answer requires a form to answer
+	       	cluesHaveAnswers = true 
 	     }
-	     if match {
-	        c.Infof("CORRECT ANSWER!")
-		correct = true
-	     } 
+
+	     if clue.AnswerIncorrect(answerAttempt) {
+
 	     }
+//correct
 	 }
 
       if correct { // would be based on points instead
       	 // advance to NextState and redirect to self
-	     err = StateTransition(c, td.User, td.HuntName, td.CurrentState.NextState, td.CurrentState.StateName)
+	     err = StateTransition(td.User, td.HuntName, td.CurrentState.NextState, td.CurrentState.StateName)
 	     if err != nil {
 	     	panic(fmt.Sprintf("error advancing from State %v to NextState %v: %v", td.CurrentState.StateName, td.CurrentState.NextState, err))
 	     }
@@ -189,7 +188,7 @@ func handleHunt(w http.ResponseWriter, r *http.Request) {
 			// to get it to make a mask from an IP object but it seems impossible!
 			maskedIP := ra.Mask(net.IPv4Mask(mask[12],mask[13],mask[14],mask[15]))
 			if (maskedIP.Equal(net.ParseIP(maskchunks[1]))){
-				err = StateTransition(c, td.User, td.HuntName, td.CurrentState.NextState, td.CurrentState.StateName)
+				err = StateTransition(td.User, td.HuntName, td.CurrentState.NextState, td.CurrentState.StateName)
 					     if err != nil {
 					     	panic(fmt.Sprintf("error advancing from State %v to NextState %v: %v", td.CurrentState.StateName, td.CurrentState.NextState, err))
 					     }
@@ -197,7 +196,7 @@ func handleHunt(w http.ResponseWriter, r *http.Request) {
 					 http.Redirect(w, r, huntPath+"/"+td.HuntName, http.StatusFound)
 			}
 		}else{
-err = StateTransition(c, td.User, td.HuntName, td.CurrentState.NextState, td.CurrentState.StateName)
+err = StateTransition(td.User, td.HuntName, td.CurrentState.NextState, td.CurrentState.StateName)
 	     if err != nil {
 	     	panic(fmt.Sprintf("error advancing from State %v to NextState %v: %v", td.CurrentState.StateName, td.CurrentState.NextState, err))
 	     }
@@ -206,7 +205,7 @@ err = StateTransition(c, td.User, td.HuntName, td.CurrentState.NextState, td.Cur
 	}
 	 } 
 	 if r.FormValue("Navigate") == "Back" {
-	    err = StateTransition(c, td.User, td.HuntName, currentHuntState.FromState, td.CurrentState.StateName)
+	    err = StateTransition(td.User, td.HuntName, currentHuntState.FromState, td.CurrentState.StateName)
 	     if err != nil {
 	     	panic(fmt.Sprintf("error advancing from State %v to NextState %v: %v", td.CurrentState.StateName, td.CurrentState.NextState, err))
 	     }

@@ -65,7 +65,7 @@ func handleHuntAdmin(w http.ResponseWriter, r *http.Request) {
     td.User = requireAdminUser(w, r)
     LogAccess(r, td.User)
 
-    c := appengine.NewContext(r)
+    c = appengine.NewContext(r)
 
     td.LogoutURL, err = getLogoutURL(c, "/")
     if err != nil {
@@ -103,7 +103,6 @@ func handleHuntAdmin(w http.ResponseWriter, r *http.Request) {
     	      
 func deleteBlobsOnRecover(w http.ResponseWriter, r *http.Request, blobs map[string][]*blobstore.BlobInfo) {
   if rec := recover(); rec != nil {
-     c := appengine.NewContext(r)
      c.Infof("Recovering in deleteBlobsOnRecover from: %v", rec)
      // panic has occured, recover from it by deleting all blobs
      for _, blobInfos := range blobs {
@@ -122,7 +121,7 @@ func deleteBlobsOnRecover(w http.ResponseWriter, r *http.Request, blobs map[stri
 
 
 func handleHuntAdminUpload(w http.ResponseWriter, r *http.Request) {
-     c := appengine.NewContext(r)
+     c = appengine.NewContext(r)
      user := requireAnyUser(w, r)
      blobs, other, err := blobstore.ParseUpload(r)
      if err != nil {
@@ -211,7 +210,7 @@ func handleHuntAdminUpload(w http.ResponseWriter, r *http.Request) {
 }
 
 func handleHuntAdminDownload(w http.ResponseWriter, r *http.Request) {
-     c := appengine.NewContext(r)
+     c = appengine.NewContext(r)
      // get huntname for the requested blobkey
      var blobKey appengine.BlobKey
      blobKey = appengine.BlobKey(r.FormValue("blobKey"))
