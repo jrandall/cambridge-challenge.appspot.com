@@ -51,6 +51,11 @@ func requireAnyUser(w http.ResponseWriter, r *http.Request) (User string) {
     }
     // valid user logged in
     User = u.String()
+    if appengine.IsDevAppServer() {
+       // don't parse as URL for app server (doesn't support openid style usernames on dev login form)
+       c.Debugf("requireAnyUser: running is app server, so not parsing userid as URL. returning user %v", User) 
+       return
+    }
     url, err := http.ParseURL(User)
     if err != nil {
        // error parsing URL, redirect to Login?

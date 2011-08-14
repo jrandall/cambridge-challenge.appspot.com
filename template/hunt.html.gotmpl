@@ -29,7 +29,10 @@
     <form action="/Hunt/{.section HuntName}{@|html}{.end}/" method="post">
       {.section SuppressAnswerBox}
       <div><input type="submit" name="Navigate" value="Forward"/></div>
+      {.section SuppressBackButton}
+      {.or}
       <div><input type="submit" name="Navigate" value="Back"/></div>
+      {.end}
       {.or}<div><input type="text" name="Answer"/></div>
       <div><input type="submit" name="Submit" value="Go"/></div>{.end}
     </form>

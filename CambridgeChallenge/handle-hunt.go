@@ -26,7 +26,6 @@ import (
     "template"
     "os"
     "strings"
-    "time"
     "fmt"
     "appengine/blobstore"
     "appengine/datastore"
@@ -38,17 +37,10 @@ type HuntTemplateData struct {
      User string
      Error string
      SuppressAnswerBox bool
+     SuppressBackButton bool
      *HuntDirectoryEntry
      DebugHuntData *Hunt
      CurrentState *State
-}
-
-type HuntState struct {
-     User   string
-     HuntName   string
-     CurrentStateName  string
-     FromState string
-     Date   datastore.Time
 }
 
 func init() {
@@ -56,19 +48,6 @@ func init() {
 }
 
 var huntTemplate = template.MustParseFile(huntTemplateFileName, template.FormatterMap{"dstime" : dstimeFormatter})
-
-func StateTransition(user string, huntName string, toState string, fromState string) (err os.Error) {
-     c.Debugf("StateTransition called to %v from %v", toState, fromState)
-	     hs := HuntState {
-     	     	User: user,
-     		HuntName: huntName,
-     		CurrentStateName: toState,
-     		FromState: fromState,
-     		Date: datastore.SecondsToTime(time.Seconds()),
-    		}
-    	     _, err = datastore.Put(c, datastore.NewIncompleteKey(huntStateDatastore), &hs)
-	     return // err
-}
 
 func handleHunt(w http.ResponseWriter, r *http.Request) {
     var td HuntTemplateData
@@ -78,6 +57,9 @@ func handleHunt(w http.ResponseWriter, r *http.Request) {
 
     td.User = requireAnyUser(w, r)
     LogAccess(r, td.User)
+    if td.User == "" {
+       panic("requireAnyUser did not return a username")
+    }
 
     // get hunt name from URL path
     huntSearchName := strings.Split(strings.Replace(r.URL.Path, huntPath, "", 1), "/", 2)[0]
@@ -96,7 +78,7 @@ func handleHunt(w http.ResponseWriter, r *http.Request) {
        // hunt found, load hunt data from blobstore
        td.HuntDirectoryEntry = &huntentries[0] // sets all HuntDirectoryEntry fields without copying data
 
-       c.Debugf("calling DecodeHuntData on blobkey %v", td.BlobKey)
+       c.Debugf("handleHunt: calling DecodeHuntData on blobkey %v", td.BlobKey)
        huntData, err := DecodeHuntData(blobstore.NewReader(c, td.BlobKey))
        if err != nil {
        	  serveError(c, w, err)
@@ -107,32 +89,38 @@ func handleHunt(w http.ResponseWriter, r *http.Request) {
        }
 
        // get and/or initialize current state
-       var currentHuntState HuntState
-       stateQuery := datastore.NewQuery(huntStateDatastore).Filter("User=", td.User).Filter("HuntName=", td.HuntName).Order("-Date").Limit(1)
-       states := make([]HuntState, 0, 1)
-       if _, err := stateQuery.GetAll(c, &states); err != nil {
+       var currentHuntState *HuntState
+       currentHuntState, err = GetCurrentHuntState(td.User, td.HuntName)
+       if err != nil {
        	  serveError(c, w, err)
-       	  return
        }
-       if len(states) == 1 {
-          currentHuntState = states[0]
-       	  currentStateName := currentHuntState.CurrentStateName
-       	  td.CurrentState = huntData.States[currentStateName]
-       } else {
-       	  // state doesn't exist, set initial state now
-	  if huntData.EnterState == "" {
-	     // hunt didn't specify initial state
-	     panic("Hunt did not specify EnterState, cannot initialize")
-	  } else {
-	     // get EnterState
-	     td.CurrentState = huntData.States[huntData.EnterState]
-	     // add Enter->CurrentState transition to huntStateDatastore
-	     err = StateTransition(td.User, td.HuntName, td.CurrentState.StateName, "START")
-	     if err != nil {
-	     	panic("error setting initial state")
-	     }
+       if currentHuntState == nil {
+       	  // set initial state (add transition from "START" to the hunt EnterStaet
+          if huntData.EnterState == "" {
+             // hunt didn't specify initial state
+             panic("Hunt did not specify EnterState, cannot initialize hunt")
+          } 
+	  err = StateTransition(td.User, td.HuntName, huntData.EnterState, "")
+	  if err != nil {
+	     panic("error setting initial state")
+	  }
+	  c.Debugf("handleHunt: StateTransition complete, getting current hunt state")
+       	  currentHuntState, err = GetCurrentHuntState(td.User, td.HuntName)
+       	  if err != nil {
+       	     serveError(c, w, err)
+       	  }
+	  if currentHuntState == nil {
+	     panic("currentHuntState nil after setting initial state")
 	  }
        }
+       c.Debugf("handleHunt: Have currentHuntState %v", currentHuntState)
+       currentStateName := currentHuntState.CurrentStateName
+       td.CurrentState = huntData.States[currentStateName]
+
+       if currentHuntState.FromState == "" {
+       	  // suppress back button when previous state is not set
+      	 td.SuppressBackButton = true
+	}
 
       // get answer submission, if any      
        err = r.ParseForm()
@@ -144,34 +132,62 @@ func handleHunt(w http.ResponseWriter, r *http.Request) {
 
       var correct = false
       var cluesHaveAnswers = false
+      var allCluesCorrect = true
 	 // check answer against all clues with answers, also noting whether any clues in this state contain an answerable answer (otherwise we are in next/previous state)
 	 var clues []Clue = td.CurrentState.Clues
 	 for _, clue := range clues {
 	     // have a clue
-	     c.Debugf("have clue with answer: %v and answertype: %v", clue.Answer, clue.AnswerType)
+	     c.Debugf("handleHunt: have clue with answer: %v and answertype: %v", clue.Answer, clue.AnswerType)
 
 	     if clue.Answerable() {
 	     	// this clues answer requires a form to answer
 	       	cluesHaveAnswers = true 
 	     }
+	     
+	     correct = clue.AnswerCorrect(answerAttempt, td.User, td.HuntName)
 
-	     if clue.AnswerIncorrect(answerAttempt) {
-
+	     if !correct {
+	     	allCluesCorrect = false
+	     	// check if there is an IncorrectAnswerState and transition to it
+		if clue.IncorrectAnswerState != "" {
+	     	   err = StateTransition(td.User, td.HuntName, clue.IncorrectAnswerState, td.CurrentState.StateName)
+	     	   if err != nil {
+	     	      panic(fmt.Sprintf("error advancing from State %v to IncorrectAnswerState %v: %v", td.CurrentState.StateName, clue.IncorrectAnswerState, err))
+	     	   }
+		   // redirect to self to get updated state
+		   // FIXME: this will miss answers just submitted now for later clues!
+	    	    http.Redirect(w, r, huntPath+"/"+td.HuntName, http.StatusFound)
+	     	    return
+		}
 	     }
-//correct
+
+	     if correct {
+	     	// check if there is a CorrectAnswerState and transition to it immediately
+		if clue.CorrectAnswerState != "" {
+	     	   err = StateTransition(td.User, td.HuntName, clue.CorrectAnswerState, td.CurrentState.StateName)
+	     	   if err != nil {
+	     	      panic(fmt.Sprintf("error advancing from State %v to CorrectAnswerState %v: %v", td.CurrentState.StateName, clue.CorrectAnswerState, err))
+	     	   }
+		   // redirect to self now that we have transitioned
+	    	    http.Redirect(w, r, huntPath+"/"+td.HuntName, http.StatusFound)
+	     	    return
+		}
+	     }
 	 }
 
-      if correct { // would be based on points instead
+      if cluesHaveAnswers && allCluesCorrect { // could be based on points instead
       	 // advance to NextState and redirect to self
 	     err = StateTransition(td.User, td.HuntName, td.CurrentState.NextState, td.CurrentState.StateName)
 	     if err != nil {
 	     	panic(fmt.Sprintf("error advancing from State %v to NextState %v: %v", td.CurrentState.StateName, td.CurrentState.NextState, err))
 	     }
-	 // redirect
-	 http.Redirect(w, r, huntPath+"/"+td.HuntName, http.StatusFound)
+	     // redirect
+	     http.Redirect(w, r, huntPath+"/"+td.HuntName, http.StatusFound)
    
 	     return
       }
+
+
 
       if !cluesHaveAnswers {
       	 td.SuppressAnswerBox = true
@@ -216,7 +232,7 @@ err = StateTransition(td.User, td.HuntName, td.CurrentState.NextState, td.Curren
 
 
     w.Header().Set("Content-Type", "text/html")
-    c.Debugf("calling huntTemplate.Execute on td: %v", td)
+    c.Debugf("handleHunt: calling huntTemplate.Execute on td: %v", td)
     if err = huntTemplate.Execute(w, td); err != nil {
         serveError(c, w, err)
     }

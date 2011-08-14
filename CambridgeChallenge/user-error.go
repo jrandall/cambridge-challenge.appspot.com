@@ -24,7 +24,7 @@ import (
     "http"
     "template"
     "os"
-    "appengine"
+    "fmt"
 )
 
 const (
@@ -38,12 +38,13 @@ var userErrorTemplate = template.MustParseFile(userErrorTemplateFileName, templa
 func recoverUserError(w http.ResponseWriter, r *http.Request) {
   if rec := recover(); rec != nil {
      var err os.Error
-     c := appengine.NewContext(r)
-     c.Infof("Recovering in deleteBlobsOnRecover from: %v", rec)     
+     c.Infof("Recovering from panic in recoverUserError: %v", rec)     
+
      w.Header().Set("Content-Type", "text/html")
      etd := map[string]string{
-     	 "Error": rec.(string),
+     	 "Error": fmt.Sprintf("%v",rec),
      }
+
      if err = userErrorTemplate.Execute(w, etd); err != nil {
         serveError(c, w, err)
      }
