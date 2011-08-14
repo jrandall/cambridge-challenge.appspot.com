@@ -37,8 +37,11 @@ func (clue *Clue) UnmarshalJSON(jsondata []byte) (err os.Error) {
 
 func (clue *Clue) Answerable() bool {
      switch clue.AnswerType {
-     	    case "": return true
-     	    case "regexp": return true
+     	    case "","regexp": {
+	    	 if clue.Answer != "" {
+	    	    return true
+		 }
+	    }
      }
      return false
 }

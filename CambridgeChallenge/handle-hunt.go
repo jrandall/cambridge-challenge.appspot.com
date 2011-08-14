@@ -192,6 +192,7 @@ func handleHunt(w http.ResponseWriter, r *http.Request) {
       if !cluesHaveAnswers {
       	 td.SuppressAnswerBox = true
 	 // if these clues don't have answers, we may have a "Forward" / "Back" button submission, check for that and act on it
+
 	 if r.FormValue("Navigate") == "Forward" {
 		//check for an IP address requirement
 		criterion := td.CurrentState.AllowNetMask
