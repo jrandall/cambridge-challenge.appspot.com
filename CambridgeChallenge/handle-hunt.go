@@ -29,7 +29,7 @@ import (
     "fmt"
     "appengine/blobstore"
     "appengine/datastore"
-	"net"
+    "net"
 )
 
 // data that gets processed by the html template
@@ -117,10 +117,10 @@ func handleHunt(w http.ResponseWriter, r *http.Request) {
        currentStateName := currentHuntState.CurrentStateName
        td.CurrentState = huntData.States[currentStateName]
 
-       if currentHuntState.FromState == "" {
-       	  // suppress back button when previous state is not set
-      	 td.SuppressBackButton = true
-	}
+//       if currentHuntState.FromState == "" {
+//       	  // suppress back button when previous state is not set
+//      	 td.SuppressBackButton = true
+//	}
 
       // get answer submission, if any      
        err = r.ParseForm()
@@ -222,9 +222,17 @@ err = StateTransition(td.User, td.HuntName, td.CurrentState.NextState, td.Curren
 	}
 	 } 
 	 if r.FormValue("Navigate") == "Back" {
-	    err = StateTransition(td.User, td.HuntName, currentHuntState.FromState, td.CurrentState.StateName)
+//	    err = StateTransition(td.User, td.HuntName, currentHuntState.FromState, td.CurrentState.StateName)
+	    c.Debugf("Navigate: back with td.CurrentState.PreviousState = %v", td.CurrentState.PreviousState)
+	    if td.CurrentState.PreviousState == "" {
+	       // no previous state, just reload (but there should have been no button present!
+	       c.Debugf("Navigate: back -- no previous state, reloading")
+	       http.Redirect(w, r, huntPath+"/"+td.HuntName, http.StatusFound)
+	       return
+	    }
+	    err = StateTransition(td.User, td.HuntName, td.CurrentState.PreviousState, td.CurrentState.StateName)
 	     if err != nil {
-	     	panic(fmt.Sprintf("error advancing from State %v to NextState %v: %v", td.CurrentState.StateName, td.CurrentState.NextState, err))
+	     	panic(fmt.Sprintf("error retreating from State %v to NextState %v: %v", td.CurrentState.StateName, td.CurrentState.PreviousState, err))
 	     }
 	 // redirect
 	 http.Redirect(w, r, huntPath+"/"+td.HuntName, http.StatusFound)

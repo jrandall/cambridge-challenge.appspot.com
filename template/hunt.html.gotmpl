@@ -27,9 +27,14 @@
     <form action="/Hunt/{.section HuntName}{@|html}{.end}/" method="post">
       {.section SuppressAnswerBox}
       <div><input type="submit" name="Navigate" value="Forward"/></div>
-      {.section SuppressBackButton}
-      {.or}
-      <div><input type="submit" name="Navigate" value="Back"/></div>
+      {.section CurrentState}
+      <!-- have CurrentState {@|html} -->
+        {.section PreviousState}
+      <!-- have CurrentState.PreviousState {@|html} -->
+        <div><input type="submit" name="Navigate" value="Back"/></div>
+        {.or}
+        <!-- back button suppressed: PreviousState not set -->
+        {.end}
       {.end}
       {.or}<div><input type="text" name="Answer"/></div>
       <div><input type="submit" name="Submit" value="Go"/></div>{.end}
